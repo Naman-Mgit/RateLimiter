@@ -3,6 +3,7 @@ package com.example.RateLimiter.Controller;
 import com.example.RateLimiter.Service.RateLimiterService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -15,14 +16,14 @@ public class TestController {
 
     @GetMapping("/api/hello")
 
-    public ResponseEntity<String> hello(){
-        boolean allowed=rateLimiterService.allowRequest();
+    public ResponseEntity<String> hello(@RequestParam String userId){
+        boolean allowed=rateLimiterService.allowRequest(userId);
 
         if(!allowed){
             return  ResponseEntity.status(429).body("Rate limit exceeded! You can only make 5 requests per minute.");
         }
 
-        int remaining= rateLimiterService.getRemainingRequest();
+        int remaining= rateLimiterService.getRemainingRequest(userId);
         return ResponseEntity.ok("Hello ! Request Allowed. Remaining Request: "+remaining);
     }
 
