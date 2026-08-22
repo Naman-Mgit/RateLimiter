@@ -1,6 +1,7 @@
 package com.example.RateLimiter.Service;
 
-import com.example.RateLimiter.Model.UserRateLimit;
+import com.example.RateLimiter.Model.TokenBucket;
+
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -9,52 +10,31 @@ import java.util.Map;
 @Service
 public class RateLimiterService {
 
-    int requestCount=0;
+     private  static  final  int BUCKET_CAPACITY=5;
 
-    private static final int maxRequest=5;
+     //1 token will get added every second
 
-    // 1 minute in ms
-    private static final long WINDOW_SIZE = 60 * 1000;
+     private  static  final double REFILL_RATE=1.0;
 
-    private  final Map<String, UserRateLimit> userLimits=new HashMap<>();
+    private final Map<String, TokenBucket> userBuckets =
+            new HashMap<>();
 
-    private long windowStartTime = System.currentTimeMillis();
+    public synchronized boolean allowRequest(String userId){
+       userBuckets.putIfAbsent(userId,new TokenBucket(BUCKET_CAPACITY,REFILL_RATE));
 
-    public boolean allowRequest(String userId){
-        long currentTime = System.currentTimeMillis();
+       TokenBucket bucket = userBuckets.get(userId);
 
-
-        userLimits.putIfAbsent(userId, new UserRateLimit());
-
-        UserRateLimit userRateLimit = userLimits.get(userId);
-
-        if (currentTime - userRateLimit.getWindowStartTime() >= WINDOW_SIZE) {
-
-            userRateLimit.reset(currentTime);
-
-            System.out.println("Rate limit reset for user: " + userId);
-        }
-
-        if(userRateLimit.getRequestCount() < maxRequest){
-             userRateLimit.incrementRequestCount();
-             return true;
-        }
-
-        return false;
+       return bucket.tryConsume();
     }
 
-    public int getRemainingRequest(String userId){
+    public int getRemainingRequests(String userId){
 
+        TokenBucket bucket = userBuckets.get(userId);
 
-        UserRateLimit userRateLimit = userLimits.get(userId);
-
-
-
-        // If the window has expired, technically all requests are available
-        if (userRateLimit == null) {
-            return maxRequest;
+        if (bucket == null) {
+            return BUCKET_CAPACITY;
         }
 
-        return maxRequest-userRateLimit.getRequestCount();
+        return bucket.getRemainingToken();
     }
 }
