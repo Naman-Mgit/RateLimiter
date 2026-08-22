@@ -19,7 +19,7 @@ public class TestController {
         boolean allowed=rateLimiterService.allowRequest();
 
         if(!allowed){
-            return  ResponseEntity.status(429).body("Rate limit exceeded ! Try again later");
+            return  ResponseEntity.status(429).body("Rate limit exceeded! You can only make 5 requests per minute.");
         }
 
         int remaining= rateLimiterService.getRemainingRequest();
