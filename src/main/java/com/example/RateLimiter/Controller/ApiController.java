@@ -1,7 +1,9 @@
 package com.example.RateLimiter.Controller;
 
+import com.example.RateLimiter.Model.ApiKey;
 import com.example.RateLimiter.Service.ApiKeyService;
 import com.example.RateLimiter.Service.RateLimiterService;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -10,41 +12,53 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class ApiController {
 
-    private  final RateLimiterService rateLimiterService;
-    private  final ApiKeyService apiKeyService;
+    private final RateLimiterService rateLimiterService;
+    private final ApiKeyService apiKeyService;
 
-
-    public  ApiController(RateLimiterService rateLimiterService,ApiKeyService apiKeyService){
-         this.rateLimiterService=rateLimiterService;
-         this.apiKeyService=apiKeyService;
+    public ApiController(
+            RateLimiterService rateLimiterService,
+            ApiKeyService apiKeyService
+    ) {
+        this.rateLimiterService = rateLimiterService;
+        this.apiKeyService = apiKeyService;
     }
 
     @GetMapping("/api/resource")
-    public ResponseEntity<String> getResource(@RequestHeader(value="X-API-KEY",required = false) String apiKey){
+    public ResponseEntity<String> getResource(
+            @RequestHeader(value = "X-API-KEY", required = false)
+            String apiKey
+    ) {
 
-        if(apiKey == null || !apiKeyService.isValidApiKey(apiKey)){
+        // 1. Check whether API key is present
+        if (apiKey == null || apiKey.isBlank()) {
             return ResponseEntity
                     .status(401)
-                    .body("Invalid or missing API key");
+                    .body("API key is missing");
         }
 
-        String userId=apiKeyService.getUserIdFromApiKey(apiKey);
+        // 2. Validate API key from MySQL
+        if (!apiKeyService.isValidApiKey(apiKey)) {
+            return ResponseEntity
+                    .status(401)
+                    .body("Invalid API key");
+        }
 
-        boolean allowed = rateLimiterService.allowRequest(userId);
+        // 3. Apply rate limiting directly using API key
+        boolean allowed = rateLimiterService.allowRequest(apiKey);
 
-        if(!allowed){
+        if (!allowed) {
             return ResponseEntity
                     .status(429)
                     .body("Rate limit exceeded. Please wait for tokens to refill.");
         }
 
-        int remainingTokens = rateLimiterService.getRemainingRequests(userId);
+        // 4. Get remaining tokens for this API key
+        int remainingTokens =
+                rateLimiterService.getRemainingTokens(apiKey);
 
         return ResponseEntity.ok(
                 "Protected resource accessed successfully! "
-                        + "User: " + userId
-                        + ", Remaining tokens: " + remainingTokens
+                        + "Remaining tokens: " + remainingTokens
         );
     }
-
 }
