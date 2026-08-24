@@ -1,11 +1,12 @@
 package com.example.RateLimiter.Controller;
 
+import com.example.RateLimiter.DTO.ApiKeyResponse;
 import com.example.RateLimiter.Model.ApiKey;
 import com.example.RateLimiter.Service.ApiKeyService;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -18,41 +19,49 @@ public class ApiKeyController {
         this.apiKeyService = apiKeyService;
     }
 
-
-    // CREATE API KEY
     @PostMapping
-    public ResponseEntity<ApiKey> createApiKey(
+    public ResponseEntity<ApiKeyResponse> createApiKey(
             @RequestParam Long userId
     ) {
+        ApiKey apiKey = apiKeyService.createApiKey(userId);
 
-        ApiKey apiKey =
-                apiKeyService.createApiKey(userId);
-
-        return ResponseEntity.ok(apiKey);
+        return ResponseEntity.ok(convertToResponse(apiKey));
     }
 
-
-    // GET ALL API KEYS FOR A USER
     @GetMapping
-    public ResponseEntity<List<ApiKey>> getApiKeys(
+    public ResponseEntity<List<ApiKeyResponse>> getApiKeys(
             @RequestParam Long userId
     ) {
-
         List<ApiKey> apiKeys =
                 apiKeyService.getApiKeysByUser(userId);
 
-        return ResponseEntity.ok(apiKeys);
+        List<ApiKeyResponse> response = new ArrayList<>();
+
+        for (ApiKey apiKey : apiKeys) {
+
+            ApiKeyResponse dto =
+                    convertToResponse(apiKey);
+
+            response.add(dto);
+        }
+
+        return ResponseEntity.ok(response);
     }
 
-
-    // REVOKE AN API KEY
     @DeleteMapping("/{apiKeyId}")
     public ResponseEntity<String> revokeApiKey(
             @PathVariable Long apiKeyId
     ) {
-
         apiKeyService.revokeApiKey(apiKeyId);
 
         return ResponseEntity.ok("API key revoked successfully");
+    }
+
+    private ApiKeyResponse convertToResponse(ApiKey apiKey) {
+        return new ApiKeyResponse(
+                apiKey.getId(),
+                apiKey.getKeyValue(),
+                apiKey.getUser().getId()
+        );
     }
 }
