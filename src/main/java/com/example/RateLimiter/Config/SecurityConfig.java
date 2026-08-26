@@ -34,7 +34,7 @@ public class SecurityConfig {
 
                         .requestMatchers("/users/**").permitAll()
                         .requestMatchers("/api/resource").permitAll()
-
+                        .requestMatchers("/redis/**").permitAll()
                         // NOW PROTECTED
                         .requestMatchers("/api-keys/**").authenticated()
 
