@@ -1,5 +1,6 @@
 package com.example.RateLimiter.Service;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,6 +19,13 @@ public class JwtService {
     @Value("${jwt.expiration}")
     private long expiration;
 
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(
+                secret.getBytes(StandardCharsets.UTF_8)
+        );
+    }
+
+    // Generate JWT
     public String generateToken(String username) {
 
         Date now = new Date();
@@ -26,15 +34,39 @@ public class JwtService {
                 now.getTime() + expiration
         );
 
-        SecretKey key = Keys.hmacShaKeyFor(
-                secret.getBytes(StandardCharsets.UTF_8)
-        );
-
         return Jwts.builder()
                 .subject(username)
                 .issuedAt(now)
                 .expiration(expiryDate)
-                .signWith(key)
+                .signWith(getSigningKey())
                 .compact();
+    }
+
+    // Extract username from JWT
+    public String extractUsername(String token) {
+
+        Claims claims = Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return claims.getSubject();
+    }
+
+    // Check if JWT is valid
+    public boolean isTokenValid(String token) {
+
+        try {
+            Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token);
+
+            return true;
+
+        } catch (Exception exception) {
+            return false;
+        }
     }
 }
