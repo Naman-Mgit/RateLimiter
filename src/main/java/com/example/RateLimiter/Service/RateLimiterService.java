@@ -1,9 +1,8 @@
 package com.example.RateLimiter.Service;
 
-import com.example.RateLimiter.Model.TokenBucket;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @Service
@@ -14,33 +13,96 @@ public class RateLimiterService {
     // 1 token added every second
     private static final double REFILL_RATE = 1.0;
 
-    // Each API key gets its own bucket
-    private final Map<String, TokenBucket> apiKeyBuckets =
-            new HashMap<>();
+    private final StringRedisTemplate redisTemplate;
+
+    public RateLimiterService(StringRedisTemplate redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
 
     public synchronized boolean allowRequest(String apiKey) {
 
-        apiKeyBuckets.putIfAbsent(
-                apiKey,
-                new TokenBucket(
-                        BUCKET_CAPACITY,
-                        REFILL_RATE
+        String redisKey = "rate_limit:" + apiKey;
+
+        // Get bucket data from Redis
+        Map<Object, Object> bucketData =
+                redisTemplate.opsForHash().entries(redisKey);
+
+        double tokens;
+        long lastRefillTime;
+
+        // First request for this API key
+        if (bucketData.isEmpty()) {
+
+            tokens = BUCKET_CAPACITY;
+            lastRefillTime = System.currentTimeMillis();
+
+        } else {
+
+            tokens = Double.parseDouble(
+                    bucketData.get("tokens").toString()
+            );
+
+            lastRefillTime = Long.parseLong(
+                    bucketData.get("lastRefillTime").toString()
+            );
+        }
+
+        // Refill tokens
+        long currentTime = System.currentTimeMillis();
+
+        long timePassed = currentTime - lastRefillTime;
+
+        double tokensToAdd =
+                (timePassed / 1000.0) * REFILL_RATE;
+
+        if (tokensToAdd > 0) {
+
+            tokens = Math.min(
+                    BUCKET_CAPACITY,
+                    tokens + tokensToAdd
+            );
+
+            lastRefillTime = currentTime;
+        }
+
+        // Try to consume one token
+        boolean allowed = false;
+
+        if (tokens >= 1) {
+
+            tokens--;
+            allowed = true;
+        }
+
+        // Save updated state back to Redis
+        redisTemplate.opsForHash().putAll(
+                redisKey,
+                Map.of(
+                        "tokens", String.valueOf(tokens),
+                        "lastRefillTime",
+                        String.valueOf(lastRefillTime)
                 )
         );
 
-        TokenBucket bucket = apiKeyBuckets.get(apiKey);
-
-        return bucket.tryConsume();
+        return allowed;
     }
+
 
     public int getRemainingTokens(String apiKey) {
 
-        TokenBucket bucket = apiKeyBuckets.get(apiKey);
+        String redisKey = "rate_limit:" + apiKey;
 
-        if (bucket == null) {
+        Object tokens =
+                redisTemplate.opsForHash()
+                        .get(redisKey, "tokens");
+
+        // No bucket yet → full capacity
+        if (tokens == null) {
             return BUCKET_CAPACITY;
         }
 
-        return bucket.getRemainingToken();
+        return (int) Double.parseDouble(
+                tokens.toString()
+        );
     }
 }

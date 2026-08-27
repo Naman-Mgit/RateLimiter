@@ -55,6 +55,7 @@ public class ApiKeyController {
 
     ) {
         //Extracting username from the jwt token after user has logged in
+
         Authentication authentication =
                 SecurityContextHolder
                         .getContext()
