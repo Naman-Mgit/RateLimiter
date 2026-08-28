@@ -25,7 +25,10 @@ public class RateLimiterService {
         this.redisTemplate = redisTemplate;
         this.rateLimiterScript = rateLimiterScript;
     }
-
+    
+    public int getBucketCapacity() {
+        return BUCKET_CAPACITY;
+    }
     public boolean allowRequest(String apiKey) {
 
         String redisKey = "rate_limit:" + apiKey;

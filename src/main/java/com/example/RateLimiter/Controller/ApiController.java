@@ -48,18 +48,47 @@ public class ApiController {
         boolean allowed = rateLimiterService.allowRequest(apiKey);
 
         if (!allowed) {
+            int remainingTokens =
+                    rateLimiterService.getRemainingTokens(apiKey);
+
             return ResponseEntity
                     .status(429)
-                    .body("Rate limit exceeded. Please wait for tokens to refill.");
+                    .header(
+                            "X-RateLimit-Limit",
+                            String.valueOf(
+                                    rateLimiterService.getBucketCapacity()
+                            )
+                    )
+                    .header(
+                            "X-RateLimit-Remaining",
+                            String.valueOf(remainingTokens)
+                    )
+                    .header(
+                            "Retry-After",
+                            "1"
+                    )
+                    .body(
+                            "Rate limit exceeded. Please wait for tokens to refill."
+                    );
         }
 
         // 4. Get remaining tokens for this API key
         int remainingTokens =
                 rateLimiterService.getRemainingTokens(apiKey);
 
-        return ResponseEntity.ok(
-                "Protected resource accessed successfully! "
-                        + "Remaining tokens: " + remainingTokens
-        );
+        return ResponseEntity.ok()
+                .header(
+                        "X-RateLimit-Limit",
+                        String.valueOf(
+                                rateLimiterService.getBucketCapacity()
+                        )
+                )
+                .header(
+                        "X-RateLimit-Remaining",
+                        String.valueOf(remainingTokens)
+                )
+                .body(
+                        "Protected resource accessed successfully!"
+                );
     }
 }

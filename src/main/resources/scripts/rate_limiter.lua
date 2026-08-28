@@ -50,7 +50,8 @@ redis.call(
     'lastRefillTime',
     lastRefillTime
 )
-
+--TTL of 1 hour
+redis.call('EXPIRE', key, 3600)
 -- Return:
 -- 1 = allowed
 -- 0 = rejected
