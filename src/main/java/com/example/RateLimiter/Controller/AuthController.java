@@ -7,6 +7,7 @@ import com.example.RateLimiter.DTO.UserResponse;
 import com.example.RateLimiter.Model.User;
 import com.example.RateLimiter.Service.JwtService;
 import com.example.RateLimiter.Service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +26,7 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(
-            @RequestBody RegisterRequest request
+            @Valid @RequestBody RegisterRequest request
     ) {
 
         User user = userService.registerUser(
@@ -44,7 +45,7 @@ public class AuthController {
     }
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(
-            @RequestBody LoginRequest request
+            @Valid  @RequestBody LoginRequest request
     ) {
 
         // Verify username and password
