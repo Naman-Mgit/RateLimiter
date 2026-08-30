@@ -29,7 +29,7 @@ public class ApiController {
             String apiKey
     ) {
 
-       
+        System.out.println("========== RESOURCE CONTROLLER REACHED ==========");
         // 1. Check whether API key is present
         if (apiKey == null || apiKey.isBlank()) {
             return ResponseEntity
@@ -43,7 +43,9 @@ public class ApiController {
                     .status(401)
                     .body("Invalid API key");
         }
+        apiKeyService.updateLastUsed(apiKey);
 
+       
         // 3. Apply rate limiting directly using API key
         boolean allowed = rateLimiterService.allowRequest(apiKey);
 

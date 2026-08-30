@@ -9,6 +9,7 @@ import com.example.RateLimiter.Repository.ApiKeyRepository;
 import com.example.RateLimiter.Repository.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -50,9 +51,47 @@ public class ApiKeyService {
         return apiKeyRepository.save(apiKey);
     }
 
+    public void updateLastUsed(String keyValue) {
 
+        ApiKey apiKey = apiKeyRepository
+                .findByKeyValue(keyValue)
+                .orElseThrow(() ->
+                        new ApiKeyNotFoundException(
+                                "API key not found"
+                        )
+                );
+
+        apiKey.setLastUsedAt(LocalDateTime.now());
+
+        apiKeyRepository.save(apiKey);
+    }
     public boolean isValidApiKey(String keyValue) {
-        return apiKeyRepository.findByKeyValue(keyValue).isPresent();
+        ApiKey apiKey = apiKeyRepository
+                .findByKeyValue(keyValue)
+                .orElse(null);
+
+        if (apiKey == null) {
+            return false;
+        }
+
+        // Check whether manually revoked
+        if (!apiKey.isActive()) {
+            return false;
+        }
+
+        // Check expiration
+        if (apiKey.getExpiresAt() != null &&
+                apiKey.getExpiresAt().isBefore(LocalDateTime.now())) {
+
+            // Automatically deactivate expired key
+            apiKey.setActive(false);
+
+            apiKeyRepository.save(apiKey);
+
+            return false;
+        }
+
+        return true;
     }
 
 
@@ -78,13 +117,14 @@ public class ApiKeyService {
                         )
                 );
 
-        // Check key ownership
         if (!apiKey.getUser().getId().equals(userId)) {
             throw new RuntimeException(
                     "You are not allowed to revoke this API key"
             );
         }
 
-        apiKeyRepository.delete(apiKey);
+        apiKey.setActive(false);
+
+        apiKeyRepository.save(apiKey);
     }
 }

@@ -105,7 +105,11 @@ public class ApiKeyController {
         return new ApiKeyResponse(
                 apiKey.getId(),
                 apiKey.getKeyValue(),
-                apiKey.getUser().getId()
+                apiKey.getUser().getId(),
+                apiKey.isActive(),
+                apiKey.getCreatedAt(),
+                apiKey.getExpiresAt(),
+                apiKey.getLastUsedAt()
         );
     }
 }
