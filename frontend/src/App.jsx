@@ -1,122 +1,143 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState } from "react";
 
 function App() {
-  const [count, setCount] = useState(0)
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    const [isLogin, setIsLogin] = useState(true);
 
-      <div className="ticks"></div>
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+    const [message, setMessage] = useState("");
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    const handleSubmit = async (e) => {
+
+        e.preventDefault();
+
+        setMessage("");
+
+        const endpoint = isLogin
+            ? "http://localhost:8080/auth/login"
+            : "http://localhost:8080/auth/register";
+
+        try {
+
+            const response = await fetch(endpoint, {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+
+                setMessage(
+                    data.message || "Something went wrong"
+                );
+
+                return;
+            }
+
+            if (isLogin) {
+
+                localStorage.setItem(
+                    "token",
+                    data.token
+                );
+
+                setMessage("Login successful!");
+
+                console.log("JWT:", data.token);
+
+            } else {
+
+                setMessage(
+                    "Registration successful! You can now login."
+                );
+
+                setIsLogin(true);
+            }
+
+        } catch (error) {
+
+            console.error(error);
+
+            setMessage(
+                "Could not connect to the server"
+            );
+        }
+    };
+
+
+    return (
+        <div className="container">
+
+            <div className="card">
+
+                <h1>
+                    Rate Limiter
+                </h1>
+
+                <h2>
+                    {isLogin ? "Login" : "Create Account"}
+                </h2>
+
+                <form onSubmit={handleSubmit}>
+
+                    <input
+                        type="text"
+                        placeholder="Username"
+                        value={username}
+                        onChange={(e) =>
+                            setUsername(e.target.value)
+                        }
+                    />
+
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        value={password}
+                        onChange={(e) =>
+                            setPassword(e.target.value)
+                        }
+                    />
+
+                    <button type="submit">
+                        {isLogin ? "Login" : "Register"}
+                    </button>
+
+                </form>
+
+                {message && (
+                    <p className="message">
+                        {message}
+                    </p>
+                )}
+
+                <button
+                    className="switch-button"
+                    onClick={() => {
+                        setIsLogin(!isLogin);
+                        setMessage("");
+                    }}
+                >
+                    {isLogin
+                        ? "Don't have an account? Register"
+                        : "Already have an account? Login"
+                    }
+                </button>
+
+            </div>
+
+        </div>
+    );
 }
 
-export default App
+export default App;
