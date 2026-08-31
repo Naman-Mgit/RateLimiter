@@ -19,7 +19,8 @@ public class ApiKey {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    private boolean active;
+    @Column(nullable = false)
+    private boolean active = true;
 
     private LocalDateTime createdAt;
 
@@ -37,7 +38,7 @@ public class ApiKey {
         this.keyValue = keyValue;
         this.user = user;
 
-        this.active = true;
+
 
         this.createdAt = LocalDateTime.now();
 

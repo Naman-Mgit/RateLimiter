@@ -29,7 +29,7 @@ public class ApiController {
             String apiKey
     ) {
 
-        System.out.println("========== RESOURCE CONTROLLER REACHED ==========");
+     
         // 1. Check whether API key is present
         if (apiKey == null || apiKey.isBlank()) {
             return ResponseEntity
