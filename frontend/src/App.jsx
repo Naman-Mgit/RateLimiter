@@ -1,143 +1,72 @@
-import { useState } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./Dashboard";
+import ProtectedRoute from "./components/ProtectedRoute";
+
+
+// ==========================================
+// App
+// ==========================================
 
 function App() {
 
-    const [isLogin, setIsLogin] = useState(true);
-
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-
-    const [message, setMessage] = useState("");
-
-    const handleSubmit = async (e) => {
-
-        e.preventDefault();
-
-        setMessage("");
-
-        const endpoint = isLogin
-            ? "http://localhost:8080/auth/login"
-            : "http://localhost:8080/auth/register";
-
-        try {
-
-            const response = await fetch(endpoint, {
-                method: "POST",
-
-                headers: {
-                    "Content-Type": "application/json"
-                },
-
-                body: JSON.stringify({
-                    username: username,
-                    password: password
-                })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-
-                setMessage(
-                    data.message || "Something went wrong"
-                );
-
-                return;
-            }
-
-            if (isLogin) {
-
-                localStorage.setItem(
-                    "token",
-                    data.token
-                );
-
-                setMessage("Login successful!");
-
-                console.log("JWT:", data.token);
-
-            } else {
-
-                setMessage(
-                    "Registration successful! You can now login."
-                );
-
-                setIsLogin(true);
-            }
-
-        } catch (error) {
-
-            console.error(error);
-
-            setMessage(
-                "Could not connect to the server"
-            );
-        }
-    };
-
+    const token = localStorage.getItem("token");
 
     return (
-        <div className="container">
 
-            <div className="card">
+        <Routes>
 
-                <h1>
-                    Rate Limiter
-                </h1>
+            {/* Login */}
+            <Route
+                path="/login"
+                element={
+                    token
+                        ? <Navigate to="/dashboard" replace />
+                        : <Login />
+                }
+            />
 
-                <h2>
-                    {isLogin ? "Login" : "Create Account"}
-                </h2>
+            {/* Register */}
+            <Route
+                path="/register"
+                element={
+                    token
+                        ? <Navigate to="/dashboard" replace />
+                        : <Register />
+                }
+            />
 
-                <form onSubmit={handleSubmit}>
+            {/* Dashboard (protected) */}
+            <Route
+                path="/dashboard"
+                element={
+                    <ProtectedRoute>
+                        <Dashboard />
+                    </ProtectedRoute>
+                }
+            />
 
-                    <input
-                        type="text"
-                        placeholder="Username"
-                        value={username}
-                        onChange={(e) =>
-                            setUsername(e.target.value)
-                        }
-                    />
+            {/* Default: redirect to /dashboard */}
+            <Route
+                path="/"
+                element={
+                    <Navigate to="/dashboard" replace />
+                }
+            />
 
-                    <input
-                        type="password"
-                        placeholder="Password"
-                        value={password}
-                        onChange={(e) =>
-                            setPassword(e.target.value)
-                        }
-                    />
+            {/* Unknown routes: redirect to /dashboard */}
+            <Route
+                path="*"
+                element={
+                    <Navigate to="/dashboard" replace />
+                }
+            />
 
-                    <button type="submit">
-                        {isLogin ? "Login" : "Register"}
-                    </button>
-
-                </form>
-
-                {message && (
-                    <p className="message">
-                        {message}
-                    </p>
-                )}
-
-                <button
-                    className="switch-button"
-                    onClick={() => {
-                        setIsLogin(!isLogin);
-                        setMessage("");
-                    }}
-                >
-                    {isLogin
-                        ? "Don't have an account? Register"
-                        : "Already have an account? Login"
-                    }
-                </button>
-
-            </div>
-
-        </div>
+        </Routes>
     );
 }
+
 
 export default App;

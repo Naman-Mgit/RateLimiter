@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
+import com.example.RateLimiter.DTO.RateLimitResponse;
 
 @RestController
 public class ApiController {
@@ -24,73 +25,68 @@ public class ApiController {
     }
 
     @GetMapping("/api/resource")
-    public ResponseEntity<String> getResource(
+    public ResponseEntity<RateLimitResponse> getResource(
             @RequestHeader(value = "X-API-KEY", required = false)
             String apiKey
     ) {
-
-     
-        // 1. Check whether API key is present
+        // 1. Check API key exists
         if (apiKey == null || apiKey.isBlank()) {
+
             return ResponseEntity
                     .status(401)
-                    .body("API key is missing");
-        }
-
-        // 2. Validate API key from MySQL
-        if (!apiKeyService.isValidApiKey(apiKey)) {
-            return ResponseEntity
-                    .status(401)
-                    .body("Invalid API key");
-        }
-        apiKeyService.updateLastUsed(apiKey);
-
-       
-        // 3. Apply rate limiting directly using API key
-        boolean allowed = rateLimiterService.allowRequest(apiKey);
-
-        if (!allowed) {
-            int remainingTokens =
-                    rateLimiterService.getRemainingTokens(apiKey);
-
-            return ResponseEntity
-                    .status(429)
-                    .header(
-                            "X-RateLimit-Limit",
-                            String.valueOf(
-                                    rateLimiterService.getBucketCapacity()
-                            )
-                    )
-                    .header(
-                            "X-RateLimit-Remaining",
-                            String.valueOf(remainingTokens)
-                    )
-                    .header(
-                            "Retry-After",
-                            "1"
-                    )
                     .body(
-                            "Rate limit exceeded. Please wait for tokens to refill."
+                            new RateLimitResponse(
+                                    "API key is missing",
+                                    0,
+                                    5
+                            )
                     );
         }
 
-        // 4. Get remaining tokens for this API key
+        // 2. Validate API key
+        if (!apiKeyService.isValidApiKey(apiKey)) {
+
+            return ResponseEntity
+                    .status(401)
+                    .body(
+                            new RateLimitResponse(
+                                    "Invalid API key",
+                                    0,
+                                    5
+                            )
+                    );
+        }
+
+        // 3. Rate limiting
+        boolean allowed =
+                rateLimiterService.allowRequest(apiKey);
+
+        // 4. Request rejected
+        if (!allowed) {
+
+            return ResponseEntity
+                    .status(429)
+                    .body(
+                            new RateLimitResponse(
+                                    "Rate limit exceeded. Please wait for tokens to refill.",
+                                    0,
+                                    5
+                            )
+                    );
+        }
+
+        // 5. Get remaining tokens
         int remainingTokens =
                 rateLimiterService.getRemainingTokens(apiKey);
 
-        return ResponseEntity.ok()
-                .header(
-                        "X-RateLimit-Limit",
-                        String.valueOf(
-                                rateLimiterService.getBucketCapacity()
-                        )
+        return ResponseEntity.ok(
+                new RateLimitResponse(
+                        "Protected resource accessed successfully!",
+                        remainingTokens,
+                        5
                 )
-                .header(
-                        "X-RateLimit-Remaining",
-                        String.valueOf(remainingTokens)
-                )
-                .body(
-                        "Protected resource accessed successfully!"
-                );
+        );
+     
+
     }
 }
